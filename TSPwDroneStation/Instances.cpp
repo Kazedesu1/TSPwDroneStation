@@ -74,7 +74,7 @@ void INSTANCE::processStations() {
             double d1 = eucliddistance(nodes, st.id, c);
             if (2 * d1 <= E) { 
                 st.reachableCustomers.push_back(c);
-                st.flightTime.push_back(d1 / alpha); // thời gian bay (tốc độ alpha)
+                st.flightTime.push_back(d1 / alpha); // thời gian bay (alpha)
             }
         }
     }
