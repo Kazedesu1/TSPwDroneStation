@@ -28,7 +28,7 @@ Solution Solver::greedyInsertion() {
         sol.trucks[t].completionTime = 0.0;
     }
 
-    // --- Step 1: Chọn station được sử dụng ---
+    //  Chọn station được sử dụng 
     auto distanceToTruckRoute = [&](int node) {
         double best = 1e9;
         for (int i = 0; i < instance.numtrucks; i++) {
@@ -73,17 +73,17 @@ Solution Solver::greedyInsertion() {
 	}
 
 
-    // --- Step 2: Cho station vào hàng đợi các customer ---
+    //  Cho station vào hàng đợi các customer 
     vector<int> customerQueue= instance.C;
     for (int s : activeStations) {
         customerQueue.push_back(s);
     }
 
-    // --- Step 3: Shuffle queue ---
+    //  Shuffle queue 
     srand(time(NULL));
     random_shuffle(customerQueue.begin(), customerQueue.end());
 
-    // --- Step 4: Best insertion  ---
+    //  Best insertion  
 	vector<int> activatedStations; // danh sách station đã active
 	vector<int> droneElit; 
         
@@ -147,7 +147,7 @@ Solution Solver::greedyInsertion() {
 			droneElit.erase(remove(droneElit.begin(), droneElit.end(), customer), droneElit.end());
 		}
     }
-	// --- Step 5: Tính makespan ---
+	//  Tính makespan 
 	double makespan = 0.0;
 	for (const auto& t : sol.trucks) {
 		makespan = max(makespan, t.completionTime);
