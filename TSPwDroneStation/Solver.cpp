@@ -1,4 +1,4 @@
-﻿#include "Solver.h"
+#include "Solver.h"
 #include <iostream>
 #include <algorithm>
 #include <limits>
@@ -10,9 +10,9 @@ using namespace std;
 Solver::Solver(const INSTANCE& inst) : instance(inst) {}
 
 void Solver::solve() {
-	Solution sol1;
-	sol1 = greedyInsertion();
-	sol1.display();
+    Solution sol1;
+    sol1 = greedyInsertion();
+    sol1.display();
 }
 
 Solution Solver::greedyInsertion() {
@@ -57,24 +57,24 @@ Solution Solver::greedyInsertion() {
         stationScore.push_back({ score, stationNode });
     }
 
-	// sort stations theo thứ tự score giảm dần
+    // sort stations theo thứ tự score giảm dần
     std::sort(stationScore.begin(), stationScore.end(),
         [](auto& a, auto& b) {
             return a.first > b.first;
         });
 
-	// chọn các station có score > 0 và không vượt quá số station được phép active
+    // chọn các station có score > 0 và không vượt quá số station được phép active
     vector<int> activeStations;
     for (auto& p : stationScore) {
         if (p.first > 0) activeStations.push_back(p.second);
     }
-	if (activeStations.size() > instance.activeStations) {
-		activeStations.resize(instance.activeStations);
-	}
+    if (activeStations.size() > instance.activeStations) {
+        activeStations.resize(instance.activeStations);
+    }
 
 
     //  Cho station vào hàng đợi các customer 
-    vector<int> customerQueue= instance.C;
+    vector<int> customerQueue = instance.C;
     for (int s : activeStations) {
         customerQueue.push_back(s);
     }
@@ -84,9 +84,9 @@ Solution Solver::greedyInsertion() {
     random_shuffle(customerQueue.begin(), customerQueue.end());
 
     //  Best insertion  
-	vector<int> activatedStations; // danh sách station đã active
-	vector<int> droneElit; 
-        
+    vector<int> activatedStations; // danh sách station đã active
+    vector<int> droneElit;
+
     for (int customer : customerQueue) {
         double bestcost = numeric_limits<double>::max();
         int bestVehi = -1, bestPos = -1; int totruck = -1;
@@ -101,7 +101,7 @@ Solution Solver::greedyInsertion() {
                     bestcost = trucktime;
                     bestVehi = t;
                     bestPos = pos;
-					totruck = 1;
+                    totruck = 1;
                 }
             }
         }
@@ -111,10 +111,10 @@ Solution Solver::greedyInsertion() {
                 if (std::find(instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.begin(), instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.end(), customer) != instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.end()) {
                     double flightTime = sol.drones[d].completionTime + instance.tau[stationid][customer] / instance.alpha;
                     if (flightTime <= bestcost) {
-						bestcost = flightTime;
-						bestVehi = d;
+                        bestcost = flightTime;
+                        bestVehi = d;
                         totruck = 0;
-					}
+                    }
                 }
 
             }
@@ -122,42 +122,51 @@ Solution Solver::greedyInsertion() {
 
         if (totruck == 1) {
             sol.trucks[bestVehi].route.insert(sol.trucks[bestVehi].route.begin() + bestPos, customer);
-			sol.trucks[bestVehi].completionTime = bestcost;
+            sol.trucks[bestVehi].completionTime = bestcost;
             if (isStation(customer)) {
+                double truckArriveStation = 0.0;
+                // Tính thời gian truck đến station (customer ở vị trí bestPos)
+                for (int i = 1; i <= bestPos; ++i) {
+                    int u = sol.trucks[bestVehi].route[i - 1];
+                    int v = sol.trucks[bestVehi].route[i];
+                    truckArriveStation += instance.tau[u][v];
+                }
+
+                // Tạo route cho mỗi drone xuất phát từ station này
                 for (int d = 0; d < UAVs; ++d) {
                     Solution::DroneRoute dr;
                     dr.stationId = customer;
                     dr.droneId = d;
-                    dr.completionTime = sol.trucks[bestVehi].completionTime;
+                    dr.completionTime = truckArriveStation; // gán thời điểm station được kích hoạt
                     sol.drones.push_back(dr);
                 }
                 activatedStations.push_back(customer);
-                
-                if(instance.stationList[customer - instance.C.size() - 1].id == customer) {
-                    for(int c : instance.stationList[customer - instance.C.size() - 1].reachableCustomers) {
+
+                if (instance.stationList[customer - instance.C.size() - 1].id == customer) {
+                    for (int c : instance.stationList[customer - instance.C.size() - 1].reachableCustomers) {
                         droneElit.push_back(c);
                     }
-				}
+                }
             }
         }
         else {
             sol.drones[bestVehi].customers.push_back(customer);
             int stationid = sol.drones[bestVehi].stationId;
             sol.drones[bestVehi].completionTime += instance.tau[stationid][customer] / instance.alpha;
-			droneElit.erase(remove(droneElit.begin(), droneElit.end(), customer), droneElit.end());
-		}
+            droneElit.erase(remove(droneElit.begin(), droneElit.end(), customer), droneElit.end());
+        }
     }
-	//  Tính makespan 
-	double makespan = 0.0;
-	for (const auto& t : sol.trucks) {
-		makespan = max(makespan, t.completionTime);
-	}
-	for (const auto& d : sol.drones) {
-		makespan = max(makespan, d.completionTime);
-	}
-	sol.objective = makespan;
+    //  Tính makespan 
+    double makespan = 0.0;
+    for (const auto& t : sol.trucks) {
+        makespan = max(makespan, t.completionTime);
+    }
+    for (const auto& d : sol.drones) {
+        makespan = max(makespan, d.completionTime);
+    }
+    sol.objective = makespan;
 
-    
+
     return sol;
 }
 
