@@ -11,8 +11,11 @@ Solver::Solver(const INSTANCE& inst) : instance(inst) {}
 
 void Solver::solve() {
     Solution sol1;
+	while (sol1.objective == 0 || sol1.objective > 180)
+    {
     sol1 = greedyInsertion();
     sol1.display();
+    }
 }
 
 Solution Solver::greedyInsertion() {
@@ -109,7 +112,7 @@ Solution Solver::greedyInsertion() {
             for (int d = 0; d < sol.drones.size(); d++) {
                 int stationid = sol.drones[d].stationId;
                 if (std::find(instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.begin(), instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.end(), customer) != instance.stationList[stationid - instance.C.size() - 1].reachableCustomers.end()) {
-                    double flightTime = sol.drones[d].completionTime + instance.tau[stationid][customer] / instance.alpha;
+                    double flightTime = sol.drones[d].completionTime + instance.tau[stationid][customer]*2 / instance.alpha;
                     if (flightTime <= bestcost) {
                         bestcost = flightTime;
                         bestVehi = d;
@@ -152,7 +155,7 @@ Solution Solver::greedyInsertion() {
         else {
             sol.drones[bestVehi].customers.push_back(customer);
             int stationid = sol.drones[bestVehi].stationId;
-            sol.drones[bestVehi].completionTime += instance.tau[stationid][customer] / instance.alpha;
+            sol.drones[bestVehi].completionTime += instance.tau[stationid][customer]*2 / instance.alpha;
             droneElit.erase(remove(droneElit.begin(), droneElit.end(), customer), droneElit.end());
         }
     }
