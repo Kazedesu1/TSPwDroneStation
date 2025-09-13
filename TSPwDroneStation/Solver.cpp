@@ -12,38 +12,33 @@ using namespace std;
 Solver::Solver(const INSTANCE& inst) : instance(inst) {}
 
 void Solver::solve() {
-    // --- Khởi tạo solution ban đầu bằng greedy ---
     Solution sol(instance);
     sol = greedyInsertion(sol);
     sol.objective = sol.calculateMakespan();
 
     Solution bestSol = sol;
 
-    int maxIter = 100;   // số vòng lặp LNS (có thể điều chỉnh)
-    int noImprove = 0;   // đếm số lần không cải thiện
+    int maxIter = 100;  
+    int noImprove = 0;   
     int maxNoImprove = 20;
 
     for (int iter = 0; iter < maxIter && noImprove < maxNoImprove; ++iter) {
-        // --- Destroy: xóa 1 phần solution (ví dụ random removal hoặc station removal) ---
         Solution destroyed = remove(sol);
 
-        // --- Repair: greedy insertion lại ---
         Solution repaired = greedyInsertion(destroyed);
         repaired.objective = repaired.calculateMakespan();
 
-        // --- Accept: chọn giải pháp tốt hơn ---
         if (repaired.objective < sol.objective) {
             sol = repaired;
             if (sol.objective < bestSol.objective) {
                 bestSol = sol;
-                noImprove = 0;  // reset bộ đếm
+                noImprove = 0;  
             }
         }
         else {
             noImprove++;
         }
 
-        // Debug hiển thị kết quả mỗi vòng
         std::cout << "Iter " << iter
             << " Obj=" << sol.objective
             << " Best=" << bestSol.objective
@@ -61,7 +56,6 @@ Solution Solver::greedyInsertion(Solution solution) {
     int num_trucks = instance.num_trucks;
     int UAVs = instance.UAVs;
 
-    // --- Chọn station còn lại (remaining_stations) ---
     auto distanceToTruckRoute = [&](int node) {
         double best = 1e9;
         for (int i = 0; i < num_trucks; i++) {
@@ -101,7 +95,6 @@ Solution Solver::greedyInsertion(Solution solution) {
         active_stations.resize(instance.active_stations);
     }
 
-    // --- Hàng đợi khách hàng + station còn lại ---
     vector<int> customerQueue = sol.remaining_customers;
     for (int s : active_stations) {
         customerQueue.push_back(s);
@@ -110,7 +103,6 @@ Solution Solver::greedyInsertion(Solution solution) {
     // Shuffle queue
     Param::shuffle(customerQueue);
 
-    // --- Tập khách hàng có thể đi drone ---
     vector<int> droneElit;
     for (int s : active_stations) {
         for (int c : instance.station_list[s - instance.C.size() - 1].reachable_customers) {
@@ -118,7 +110,6 @@ Solution Solver::greedyInsertion(Solution solution) {
         }
     }
 
-    // --- Bắt đầu greedy insertion ---
     for (int customer : customerQueue) {
         double bestcost = numeric_limits<double>::max();
         int bestVehi = -1, bestPos = -1;
@@ -161,7 +152,6 @@ Solution Solver::greedyInsertion(Solution solution) {
             }
         }
 
-        // --- Thực hiện insertion ---
         if (totruck == 1) {
             sol.trucks[bestVehi].route.insert(sol.trucks[bestVehi].route.begin() + bestPos, customer);
             sol.trucks[bestVehi].completion_time = bestcost;
@@ -293,7 +283,7 @@ void Solver::removeUnusedStations(Solution& sol) {
 Solution Solver::remove(Solution& sol) {
     Solution newSol = sol;
 
-    // 2. Xóa ngẫu nhiên 1 nửa drone station bằng removeStation
+    // Xóa ngẫu nhiên 1 nửa drone station bằng removeStation
     size_t num_station_to_remove = newSol.activated_stations.size() / 2;
     vector<int> stations_to_remove = newSol.activated_stations;
     std::shuffle(stations_to_remove.begin(), stations_to_remove.end(), Param::mt);
@@ -303,7 +293,7 @@ Solution Solver::remove(Solution& sol) {
         newSol = removeStation(newSol, station);
     }
 
-    // 1. Gom tất cả khách hàng trong mọi truck routes (không tính station và depot)
+    // Gom tất cả khách hàng trong mọi truck routes 
     vector<pair<int, int>> all_customers; // (customer, truck_id)
     for (int t = 0; t < (int)newSol.trucks.size(); ++t) {
         for (int node : newSol.trucks[t].route) {
@@ -319,7 +309,7 @@ Solution Solver::remove(Solution& sol) {
     // Số lượng cần xóa = 50% tổng khách hàng
     size_t num_to_remove = round(all_customers.size() * 0.5);
 
-    // Xóa lần lượt
+    // Xóa khách hàng
     for (size_t k = 0; k < num_to_remove; ++k) {
         int customer = all_customers[k].first;
         int truck_id = all_customers[k].second;
@@ -360,3 +350,4 @@ void Solver::removeCustomerFromTruck(Solution& sol, int truckId, int customer) {
     }
 	sol.remaining_customers.push_back(customer);
 }
+
