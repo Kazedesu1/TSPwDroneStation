@@ -15,18 +15,18 @@ public:
         int id;
         double x;
         double y;
-        double maxFlight;                // E/2
-		vector<int> reachableCustomers;  // customers trong t?m bay
-		vector<double> flightTime;       // th?i gian bay ??n t?ng customer
+        double max_flight;                // E/2
+		vector<int> reachable_customers;  // customers trong t?m bay
+		vector<double> flight_time;       // th?i gian bay ??n t?ng customer
     };
 
     vector<vector<double>> tau;     // distance matrix (truck)
     vector<vector<double>> nodes;   // coordinates: index -> (x,y)
-    vector<int> truckonly;          
+    vector<int> truck_only;          
     vector<int> C;                  
-    vector<Stations> stationList;   // all stations
-	int numtrucks;                  
-    int activeStations;             
+    vector<Stations> station_list;   // all stations
+	int num_trucks;                  
+    int active_stations;             
     int UAVs;                       
     int n;                          
 

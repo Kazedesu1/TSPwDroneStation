@@ -1,6 +1,20 @@
 ﻿#include "Instances.h"
+#include <regex>
 
 bool INSTANCE::loadFromFile(const std::string& filename) {
+    // --- Tự động lấy n, k, r từ tên file ---
+    std::smatch match;
+    std::regex re("B-n(\\d+)-k(\\d+)-r(\\d+)");
+    if (std::regex_search(filename, match, re)) {
+        if (match.size() == 4) {
+            num_trucks = std::stoi(match[2].str());
+            E = std::stod(match[3].str()) * 2; // r là E/2, nên E = r*2
+        }
+    }
+    if( num_trucks >=6) {
+        active_stations = 6;
+    }
+	else active_stations = 4;
     ifstream fin(filename);
     if (!fin.is_open()) {
         cerr << "Error: cannot open file " << filename << endl;
@@ -12,7 +26,7 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
     Section section = NONE;
 
     nodes.clear();
-    stationList.clear();
+    station_list.clear();
 
     while (getline(fin, line)) {
         if (line.empty()) continue;
@@ -42,7 +56,7 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
                 st.id = nodes.size() - 1;
                 st.x = x;
                 st.y = y;
-                stationList.push_back(st);
+                station_list.push_back(st);
             }
             if (section == CUSTOMERS) {
 				C.push_back(nodes.size() - 1); 
@@ -52,11 +66,11 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
 
     fin.close();
 
-    n = nodes.size();
+    n = nodes.size() + station_list.size();
 	C.erase(remove(C.begin(), C.end(), 0), C.end()); 
     tau.assign(n, vector<double>(n, 0.0));
     for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
+        for (int j = i + 1; j < nodes.size(); j++) {
             double dist = eucliddistance(nodes, i, j);
             tau[i][j] = tau[j][i] = dist;
         }
@@ -66,22 +80,22 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
 }
 
 void INSTANCE::processStations() {
-    for (auto& st : stationList) {
-        st.maxFlight = E / 2.0; 
+    for (auto& st : station_list) {
+        st.max_flight = E / 2.0; 
 
-        for (int c = 1; c < n; c++) { 
+        for (int c = 1; c < nodes.size(); c++) { 
 			if (c == st.id) continue; 
             double d1 = eucliddistance(nodes, st.id, c);
             if (2 * d1 <= E) { 
-                st.reachableCustomers.push_back(c);
-                st.flightTime.push_back(d1 / alpha); // thời gian bay (alpha = drone spd)
+                st.reachable_customers.push_back(c);
+                st.flight_time.push_back(d1 *2/ alpha); // thời gian bay (tốc độ alpha)
             }
         }
     }
     for (int c = 1; c < n; c++) {
         bool reachable = false;
-        for (auto& st : stationList) {
-            for (int rc : st.reachableCustomers) {
+        for (auto& st : station_list) {
+            for (int rc : st.reachable_customers) {
                 if (rc == c) {
                     reachable = true;
                     break;
@@ -90,7 +104,7 @@ void INSTANCE::processStations() {
             if (reachable) break;
         }
         if (!reachable) {
-            truckonly.push_back(c);
+            truck_only.push_back(c);
         }
     }
 }
@@ -107,24 +121,24 @@ void INSTANCE::displayData() {
         }
         cout << endl;
 	}
-    cout << "Drone stations: " << stationList.size() << endl;
-    for (auto& st : stationList) {
-        cout << "Station " << st.id << " (" << st.x << "," << st.y << ") E/2=" << st.maxFlight << endl;
+    cout << "Drone stations: " << station_list.size() << endl;
+    for (auto& st : station_list) {
+        cout << "Station " << st.id << " (" << st.x << "," << st.y << ") E/2=" << st.max_flight << endl;
         cout << "  Reachable customers: ";
-        for (size_t i = 0; i < st.reachableCustomers.size(); i++) {
-            int cid = st.reachableCustomers[i];
-            double t = st.flightTime[i];
+        for (size_t i = 0; i < st.reachable_customers.size(); i++) {
+            int cid = st.reachable_customers[i];
+            double t = st.flight_time[i];
             cout << cid << "(time=" << t << ") ";
         }
         cout << endl;
     }
-	cout << "Active stations: " << activeStations << endl;
+	cout << "Active stations: " << active_stations << endl;
     cout << "UAVs per station: " << UAVs << endl;
     cout << "Max endurance (E): " << E << endl;
 	cout << "Drone speed factor (alpha): " << alpha << endl;
-    cout << "Number of trucks: " << numtrucks << endl;
+    cout << "Number of trucks: " << num_trucks << endl;
     cout << "Truck-only nodes: ";
-    for (int node : truckonly) {
+    for (int node : truck_only) {
         cout << node << " ";
     }
 	cout << endl;
