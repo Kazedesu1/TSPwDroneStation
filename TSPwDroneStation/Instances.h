@@ -17,6 +17,7 @@ public:
         double y;
         double max_flight;                // E/2
 		vector<int> reachable_customers;  // customers trong t?m bay
+        vector<int> drone_only_nodes;
 		vector<double> flight_time;       // th?i gian bay ??n t?ng customer
     };
 
@@ -29,7 +30,6 @@ public:
     int active_stations;             
     int UAVs;                       
     int n;                          
-
     double E;                       // max endurance
     double alpha;                   // drone speed 
 

@@ -4,7 +4,7 @@
 bool INSTANCE::loadFromFile(const std::string& filename) {
     // --- Tự động lấy n, k, r từ tên file ---
     std::smatch match;
-    std::regex re("B-n(\\d+)-k(\\d+)-r(\\d+)");
+    std::regex re("-n(\\d+)-k(\\d+)-r(\\d+)");
     if (std::regex_search(filename, match, re)) {
         if (match.size() == 4) {
             num_trucks = std::stoi(match[2].str());
@@ -66,9 +66,9 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
 
     fin.close();
 
-    n = nodes.size() + station_list.size();
+    n = nodes.size();
 	C.erase(remove(C.begin(), C.end(), 0), C.end()); 
-    tau.assign(n, vector<double>(n, 0.0));
+    tau.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < nodes.size(); j++) {
             double dist = eucliddistance(nodes, i, j);
@@ -90,21 +90,6 @@ void INSTANCE::processStations() {
                 st.reachable_customers.push_back(c);
                 st.flight_time.push_back(d1 *2/ alpha); // thời gian bay (tốc độ alpha)
             }
-        }
-    }
-    for (int c = 1; c < n; c++) {
-        bool reachable = false;
-        for (auto& st : station_list) {
-            for (int rc : st.reachable_customers) {
-                if (rc == c) {
-                    reachable = true;
-                    break;
-                }
-            }
-            if (reachable) break;
-        }
-        if (!reachable) {
-            truck_only.push_back(c);
         }
     }
 }
@@ -132,6 +117,9 @@ void INSTANCE::displayData() {
         }
         cout << endl;
     }
+    for(int c : C) {
+        cout << "Customer: " << c << " (" << nodes[c][0] << "," << nodes[c][1] << ")" << endl;
+	}
 	cout << "Active stations: " << active_stations << endl;
     cout << "UAVs per station: " << UAVs << endl;
     cout << "Max endurance (E): " << E << endl;

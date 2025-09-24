@@ -38,4 +38,5 @@ public:
     // Add copy constructor and copy assignment operator
     Solution(const Solution& other);
     Solution& operator=(const Solution& other);
+    void feasiblecheck() const;
 };
