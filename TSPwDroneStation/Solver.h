@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef SOLVER_H
 #define SOLVER_H
 
@@ -7,11 +7,19 @@
 #include "Instances.h"
 #include "Solution.h"
 using namespace std;
+
+// --- thêm struct phụ trợ cho score ---
+struct StationScore {
+	int station_id;
+	double score;
+	vector<int> covered_drone_only;
+};
+
 class Solver {
 public:
-	Solver(const INSTANCE& instance);
+	Solver(INSTANCE& instance);
 	void solve();
-	const INSTANCE& instance;
+	INSTANCE instance;
 	Solution greedyInsertion(Solution sol);
 	bool isStation(int node) const;
 	Solution Ruin(Solution& sol);
@@ -23,6 +31,11 @@ public:
 	Solution RandomRemoveStation(Solution& sol);
 	double bestObjective = 1e9;
 	double firstObjective = 1e9;
+	int getStationIndexById(int id) const;
+	double tspCost(const Solution& sol, const vector<int>& nodes);
+	StationScore computeStationScore(const Solution& sol, const INSTANCE::Stations& st);
+	vector<int> selectStations(const Solution& sol);
+	Solution RandomRemoveDroneNode(Solution& sol);
 };
 
 #endif // SOLVER_H

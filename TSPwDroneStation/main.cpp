@@ -6,25 +6,23 @@
 #include <iostream>
 #include <regex>
 #include "Solver.h"
+#include "Param.h"
+#include <string>
+#include <filesystem>
 
 int main() {
-    std::vector<std::string> files = {
-        "Clustered/M-n121-k7-r8.mtspds",
-        "Clustered/M-n121-k7-r12.mtspds",
-        "Clustered/M-n121-k7-r16.mtspds"
-    };
-
-    std::vector<double> droneSpeeds = { 0.5, 1.0, 1.2 };
+    std::vector<std::string> files = Param::clusterd_filenames;
+    std::vector<double> droneSpeeds = { 0.5, 1.0, 2 };
 
     std::ofstream csv("results.csv");
-    csv << "Instance,firstObjective,finalObjective,time(ms)\n";
+    csv << "Instance,firstObjective,finalObjective,time(s)\n";
 
     for (const auto& file : files) {
-        // Lấy tên instance (không có path + bỏ .mtspds)
+        // Lấy tên instance (bỏ path + extension)
         std::string filename = file.substr(file.find_last_of("/") + 1);
         std::string instName = filename.substr(0, filename.find("."));
 
-        // Parse số trucks mặc định từ tên file: "-kX-"
+        // Lấy số trucks từ tên file "-kX-"
         std::regex rgx("-k(\\d+)-");
         std::smatch match;
         int trucksFromFile = 0;
@@ -32,7 +30,6 @@ int main() {
             trucksFromFile = std::stoi(match[1].str());
         }
 
-        // danh sách cấu hình trucks: 2,3,4 + giá trị trong file (nếu khác)
         std::vector<int> truckConfigs = { 2, 3, 4 };
         if (std::find(truckConfigs.begin(), truckConfigs.end(), trucksFromFile) == truckConfigs.end()) {
             truckConfigs.push_back(trucksFromFile);
@@ -52,16 +49,17 @@ int main() {
                     auto start = std::chrono::high_resolution_clock::now();
                     solver.solve();
                     auto end = std::chrono::high_resolution_clock::now();
-                    double time_ms = std::chrono::duration<double, std::milli>(end - start).count();
+                    double runtime = std::chrono::duration<double>(end - start).count();
 
-                    csv << instName
-                        << "_" << numDrones
-                        << "_" << numTrucks
-                        << "_" << alpha
-                        << "," << solver.firstObjective   // <-- thêm firstObjective
-                        << "," << solver.bestObjective    // <-- final objective
-                        << "," << std::fixed << std::setprecision(2) << time_ms
-                        << "\n";
+                    // Ghi kết quả ra file ngay khi có
+                    csv << instName << "_"
+                        << numDrones << "_"
+                        << numTrucks << "_"
+                        << alpha << ","
+                        << solver.firstObjective << ","
+                        << solver.bestObjective << ","
+                        << std::fixed << std::setprecision(2) << runtime << "\n";
+                    csv.flush();
 
                     std::cout << "Done: " << instName
                         << " Drones=" << numDrones
@@ -69,10 +67,11 @@ int main() {
                         << " Speed=" << alpha
                         << " FirstObj=" << solver.firstObjective
                         << " FinalObj=" << solver.bestObjective
-                        << " Time=" << time_ms << "ms\n";
+                        << " Time=" << runtime << "s\n";
                 }
             }
         }
+        std::cout << std::endl << std::endl;
     }
 
     csv.close();
@@ -84,13 +83,76 @@ int main() {
 
 
 
+
 //int main() {
 //    INSTANCE instance;
-//    instance.alpha = 1;
+//    instance.alpha = 0.5;
 //    instance.UAVs = 1;
-//    instance.loadFromFile("Intances/Clustered/M-n121-k7-r8.mtspds");
+//	instance.num_trucks = 5;
+//    instance.loadFromFile("Intances/Clustered/B-n31-k5-r12.mtspds");
 //    instance.displayData();
 //    Solver solver(instance);
+//	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 //	solver.solve();
+//	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+//	double time_s = std::chrono::duration<double>(end - start).count();
+//	std::cout << "Time: " << std::fixed << std::setprecision(2) << time_s << "s" << std::endl;
+//    return 0;
+//}
+
+//int main() {
+//    INSTANCE instance;
+//    
+//    instance.loadFromFile2("Data/u_min/20-11-11-40-50-2.txt");
+//    instance.displayData();
+//    Solver solver(instance);
+//    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+//    solver.solve();
+//    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+//    double time_s = std::chrono::duration<double>(end - start).count();
+//    std::cout << "Time: " << std::fixed << std::setprecision(2) << time_s << "s" << std::endl;
+//    return 0;
+//}
+
+//int main() {
+//    std::vector<std::string> u_min_files = { "u_min.txt", "u_min_1.txt", "u_min_2.txt", "u_min_3.txt" };
+//    std::ofstream csv("2eche.csv");
+//    csv << "filename,firstobj,bestobj,runtime(s)\n";
+//
+//    for (const auto& umin : u_min_files) {
+//        std::ifstream fin("data/u_min/" + umin);
+//        std::vector<std::string> filenames;
+//        std::string line;
+//        while (std::getline(fin, line)) {
+//            if (!line.empty()) filenames.push_back(line);
+//        }
+//        fin.close();
+//
+//        for (const auto& fname : filenames) {
+//            std::string fullpath = "data/u_min/" + fname;
+//            INSTANCE instance;
+//            if (!instance.loadFromFile2(fullpath)) continue;
+//
+//            Solver solver(instance);
+//            auto start = std::chrono::high_resolution_clock::now();
+//            solver.solve();
+//            auto end = std::chrono::high_resolution_clock::now();
+//            double runtime = std::chrono::duration<double>(end - start).count();
+//
+//            // Ghi kết quả ra file ngay khi có
+//            csv << fname << ","
+//                << solver.firstObjective << ","
+//                << solver.bestObjective << ","
+//                << std::fixed << std::setprecision(2) << runtime << "\n";
+//            csv.flush(); // Đảm bảo ghi ra file ngay
+//
+//            std::cout << "Done: " << fname
+//                << " 1stObj=" << solver.firstObjective
+//                << " BestObj=" << solver.bestObjective
+//                << " Time=" << runtime << "s\n";
+//        }
+//        std::cout << std::endl << std::endl;
+//    }
+//    csv.close();
 //    return 0;
 //}

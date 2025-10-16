@@ -8,8 +8,9 @@
 Solution::Solution(const INSTANCE& inst) : instance(inst) {
     vehicle_of_customer.resize(instance.n);
     station_time.resize(instance.n);
+    wait_time.resize(instance.n);
     trucks.resize(instance.num_trucks);
-
+	station_truck.resize(instance.n, -1); // -1 nghĩa là chưa có truck phục vụ
     for (int t = 0; t < instance.num_trucks; ++t) {
         trucks[t].truck_id = t;
         trucks[t].completion_time = 0.0;
@@ -20,6 +21,9 @@ Solution::Solution(const INSTANCE& inst) : instance(inst) {
     for (const auto& st : inst.station_list) {
         remaining_stations.push_back(st.id);
     }
+
+    // drones (2D) khởi tạo rỗng — sẽ push_back khi activate station
+    drones.resize(instance.station_list.size());
 }
 
 Solution::Solution(const Solution& other)
@@ -31,7 +35,9 @@ Solution::Solution(const Solution& other)
     trucks(other.trucks),
     drones(other.drones),
     activated_stations(other.activated_stations),
-    objective(other.objective)
+	wait_time(other.wait_time),
+    objective(other.objective),
+	station_truck(other.station_truck)
 {
 }
 
@@ -44,7 +50,9 @@ Solution& Solution::operator=(const Solution& other) {
         trucks = other.trucks;
         drones = other.drones;
         activated_stations = other.activated_stations;
+		wait_time = other.wait_time;
         objective = other.objective;
+		station_truck = other.station_truck;
     }
     return *this;
 }
@@ -52,7 +60,7 @@ Solution& Solution::operator=(const Solution& other) {
 
 void Solution::display() const {
     std::cout << "===== Solution =====" << std::endl;
-	std::cout << "seed: " << Param::seed << std::endl;
+    std::cout << "seed: " << Param::seed << std::endl;
     // xác định độ rộng in (tùy chỉnh theo độ dài lớn nhất bạn có)
     const int width = 50;
 
@@ -65,14 +73,17 @@ void Solution::display() const {
             << "| Completion = " << t.completion_time << std::endl;
     }
 
-    for (const auto& d : drones) {
-        std::ostringstream oss;
-        oss << "Station " << d.station_id
-            << ", Drone " << d.drone_id << ": ";
-        for (int v : d.customers) oss << v << " ";
+    // drones is now vector<vector<DroneRoute>>
+    for (const auto& stationDrones : drones) {
+        for (const auto& d : stationDrones) {
+            std::ostringstream oss;
+            oss << "Station " << d.station_id
+                << ", Drone " << d.drone_id << ": ";
+            for (int v : d.customers) oss << v << " ";
 
-        std::cout << std::left << std::setw(width) << oss.str()
-            << "| Completion = " << d.completion_time << std::endl;
+            std::cout << std::left << std::setw(width) << oss.str()
+                << "| Completion = " << d.completion_time << " | Arrival Time =" << station_time[d.station_id] << " | Wait Time =" << wait_time[d.station_id] << std::endl;
+        }
     }
 
     std::cout << "Objective (makespan) = " << objective << std::endl;
@@ -83,26 +94,30 @@ double Solution::calculateMakespan() const {
     for (const auto& t : trucks) {
         makespan = std::max(makespan, t.completion_time);
     }
-    for (const auto& d : drones) {
-        makespan = std::max(makespan, d.completion_time);
+    for (const auto& stationDrones : drones) {
+        for (const auto& d : stationDrones) {
+            makespan = std::max(makespan, d.completion_time);
+        }
     }
     return makespan;
 }
 
 void Solution::feasiblecheck() const {
-	//Kiểm tra tất cả khách hàng đã được phục vụ bằng route của trucks và drones và lặp lại 2 lần không
+    //Kiểm tra tất cả khách hàng đã được phục vụ bằng route của trucks và drones và lặp lại 2 lần không
     // Kiểm tra khách hàng được phục vụ đúng một lần
     std::unordered_map<int, int> servedCount;
     for (const auto& t : trucks) {
         for (int node : t.route) {
-            if ( node != 0) {
+            if (node != 0) {
                 servedCount[node]++;
             }
         }
     }
-    for (const auto& d : drones) {
-        for (int c : d.customers) {
-            servedCount[c]++;
+    for (const auto& stationDrones : drones) {
+        for (const auto& d : stationDrones) {
+            for (int c : d.customers) {
+                servedCount[c]++;
+            }
         }
     }
 
@@ -138,35 +153,41 @@ void Solution::feasiblecheck() const {
             std::cout << "Truck " << t.truck_id << " completion time mismatch!" << std::endl;
         }
         else
-			std::cout << "Truck " << t.truck_id << " completion time verified." << std::endl;
+            std::cout << "Truck " << t.truck_id << " completion time verified." << std::endl;
     }
     // Kiểm tra thời gian hoàn thành của drone
-    for (const auto& d : drones) {
-        int station_id = d.station_id;
-		double time = station_time[station_id];
-        for (int c : d.customers) {
-            time += instance.tau[station_id][c] * 2 / instance.alpha;
+    for (const auto& stationDrones : drones) {
+        for (const auto& d : stationDrones) {
+            int station_id = d.station_id;
+            double time = 0.0;
+            if (station_id >= 0 && station_id < (int)station_time.size())
+                time = station_time[station_id];
+            for (int c : d.customers) {
+                time += instance.tau[station_id][c] * 2 / instance.alpha;
+            }
+            if (std::abs(time - d.completion_time) > 1e-6) {
+                std::cout << "Drone at Station " << d.station_id << " completion time mismatch!" << std::endl;
+            }
+            else
+                std::cout << "Drone at Station " << d.station_id << " completion time verified." << std::endl;
         }
-        if (std::abs(time - d.completion_time) > 1e-6) {
-            std::cout << "Drone at Station " << d.station_id <<  " completion time mismatch!" << std::endl;
-        }
-        else
-			std::cout << "Drone at Station " << d.station_id << " completion time verified." << std::endl;
     }
     // Kiểm tra range của drone 
-	bool exceeds = false;
-    for (const auto& d : drones) {
-        int station_id = d.station_id;
-        double max_flight = instance.E;
-        for (int c : d.customers) {
-            double flight_dist = instance.tau[station_id][c] * 2;
-            if (flight_dist > max_flight + 1e-6) {
-                std::cout << "Drone at Station " << d.station_id << " exceeds range to Customer " << c << "!" << std::endl;
-				exceeds = true;
+    bool exceeds = false;
+    for (const auto& stationDrones : drones) {
+        for (const auto& d : stationDrones) {
+            int station_id = d.station_id;
+            double max_flight = instance.E;
+            for (int c : d.customers) {
+                double flight_dist = instance.tau[station_id][c] * 2;
+                if (flight_dist > max_flight + 1e-6) {
+                    std::cout << "Drone at Station " << d.station_id << " exceeds range to Customer " << c << "!" << std::endl;
+                    exceeds = true;
+                }
             }
         }
-	}
-	if (!exceeds)
-		std::cout << "All drones are within their range." << std::endl;
+    }
+    if (!exceeds)
+        std::cout << "All drones are within their range." << std::endl;
     std::cout << "Feasibility check completed." << std::endl;
 }

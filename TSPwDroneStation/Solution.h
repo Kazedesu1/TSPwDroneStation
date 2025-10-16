@@ -10,9 +10,11 @@ public:
     struct DroneRoute {
         int station_id;               // station xuất phát
         int drone_id;                 // ID drone trong station
+        int truck_id;                 // truck mang drone đến station (-1 nếu station có drone riêng)
         vector<int> customers;        // danh sách khách hàng drone phục vụ
         double completion_time;       // thời gian drone hoàn thành route
     };
+
 
     struct TruckRoute {
         int truck_id;
@@ -22,10 +24,13 @@ public:
 	vector<int> remaining_customers; // danh sách khách hàng chưa được phục vụ
 	vector<int> remaining_stations; // danh sách station chưa được kích hoạt
     vector<double> station_time;           // thời gian truck đến station
+	vector<int> station_truck;         // truck_id phục vụ station (nếu không có drone riêng)
+	vector<double> wait_time;              // thời gian chờ tại station (nếu không có drone riêng)
     vector<int> vehicle_of_customer;       // lưu truck_id hoặc drone_id phục vụ customer
     vector<TruckRoute> trucks;             // tất cả các truck routes
-    vector<DroneRoute> drones;             // tất cả các drone routes
+    vector<vector<DroneRoute>> drones;     // tất cả các drone routes
     vector<int> activated_stations;        // danh sách station được kích hoạt
+    vector<int> drone_only_remaining;
     double objective;                      // makespan 
 
     Solution(const INSTANCE& inst);        // constructor nhận INSTANCE
