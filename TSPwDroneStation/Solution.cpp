@@ -1,4 +1,4 @@
-﻿#include "solution.h"
+﻿#include "Solution.h"
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -22,7 +22,6 @@ Solution::Solution(const INSTANCE& inst) : instance(inst) {
         remaining_stations.push_back(st.id);
     }
 
-    // drones (2D) khởi tạo rỗng — sẽ push_back khi activate station
     drones.resize(instance.station_list.size());
 }
 
@@ -61,7 +60,6 @@ Solution& Solution::operator=(const Solution& other) {
 void Solution::display() const {
     std::cout << "===== Solution =====" << std::endl;
     std::cout << "seed: " << Param::seed << std::endl;
-    // xác định độ rộng in (tùy chỉnh theo độ dài lớn nhất bạn có)
     const int width = 50;
 
     for (const auto& t : trucks) {
@@ -73,7 +71,6 @@ void Solution::display() const {
             << "| Completion = " << t.completion_time << std::endl;
     }
 
-    // drones is now vector<vector<DroneRoute>>
     for (const auto& stationDrones : drones) {
         for (const auto& d : stationDrones) {
             std::ostringstream oss;

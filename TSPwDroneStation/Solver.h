@@ -25,17 +25,21 @@ public:
 	Solution Ruin(Solution& sol);
 	Solution removeStation(Solution& sol, int stationNode);
 	void removeUnusedStations(Solution& sol);
-	Solution RandomRemoval(Solution& sol);
+	Solution RandomRemoval(Solution& sol, double rate);
 	void removeCustomerFromTruck(Solution& sol, int truckId, int customer);
-	Solution WorstRemoval(Solution& sol);
-	Solution RandomRemoveStation(Solution& sol);
+	Solution WorstRemoval(Solution& sol, double rate);
+	Solution RandomRemoveStation(Solution& sol, double rate);
 	double bestObjective = 1e9;
 	double firstObjective = 1e9;
 	int getStationIndexById(int id) const;
 	double tspCost(const Solution& sol, const vector<int>& nodes);
 	StationScore computeStationScore(const Solution& sol, const INSTANCE::Stations& st);
 	vector<int> selectStations(const Solution& sol);
-	Solution RandomRemoveDroneNode(Solution& sol);
+	Solution RandomRemoveDroneNode(Solution& sol, double rate);
+	int lastIter = 0;
+	void select_insertion_criterion(vector<int>& customerQueue, const vector<double>& w, const Solution& sol);
+	vector<double> w = { 5,1,1,2,2 };
+	Solution s_best;
 };
 
 #endif // SOLVER_H

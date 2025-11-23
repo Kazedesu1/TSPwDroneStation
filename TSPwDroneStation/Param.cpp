@@ -1,10 +1,12 @@
 #include "Param.h"
 #include <iostream>
+#include <algorithm>
+#include <random>
 #include "Solver.h"
 
 int Param::seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-// dynamic seed
-std::mt19937 Param::mt = std::mt19937(Param::seed);
+// per-thread RNG (will be seeded by each thread)
+thread_local std::mt19937 Param::mt;
 
 std::vector<std::string> Param::clusterd_filenames = {
         "Clustered/B-n31-k5-r8.mtspds",
@@ -82,6 +84,84 @@ std::vector<std::string> Param::clusterd_filenames = {
         "Clustered/M-n121-k7-r8.mtspds",
         "Clustered/M-n121-k7-r12.mtspds",
         "Clustered/M-n121-k7-r16.mtspds"
+};
+
+std::vector<std::string> Param::scatterd_filenames = {
+    "Scattered/P-n50-k7-r16.mtspds",
+    "Scattered/P-n60-k10-r8.mtspds",
+    "Scattered/P-n60-k10-r12.mtspds",
+    "Scattered/P-n60-k10-r16.mtspds",
+    "Scattered/P-n65-k10-r8.mtspds",
+    "Scattered/P-n65-k10-r12.mtspds",
+    "Scattered/P-n65-k10-r16.mtspds",
+    "Scattered/A-n34-k5-r8.mtspds",
+    "Scattered/A-n34-k5-r12.mtspds",
+    "Scattered/A-n34-k5-r16.mtspds",
+    "Scattered/A-n36-k5-r8.mtspds",
+    "Scattered/A-n36-k5-r12.mtspds",
+    "Scattered/A-n36-k5-r16.mtspds",
+    "Scattered/A-n45-k7-r8.mtspds",
+    "Scattered/A-n45-k7-r12.mtspds",
+    "Scattered/A-n45-k7-r16.mtspds",
+    "Scattered/A-n46-k7-r8.mtspds",
+    "Scattered/A-n46-k7-r12.mtspds",
+    "Scattered/A-n46-k7-r16.mtspds",
+    "Scattered/A-n48-k7-r8.mtspds",
+    "Scattered/A-n48-k7-r12.mtspds",
+    "Scattered/A-n48-k7-r16.mtspds",
+    "Scattered/A-n55-k9-r8.mtspds",
+    "Scattered/A-n55-k9-r12.mtspds",
+    "Scattered/A-n55-k9-r16.mtspds",
+    "Scattered/A-n60-k9-r8.mtspds",
+    "Scattered/A-n60-k9-r12.mtspds",
+    "Scattered/A-n60-k9-r16.mtspds",
+    "Scattered/A-n62-k8-r8.mtspds",
+    "Scattered/A-n62-k8-r12.mtspds",
+    "Scattered/A-n62-k8-r16.mtspds",
+    "Scattered/A-n69-k9-r8.mtspds",
+    "Scattered/A-n69-k9-r12.mtspds",
+    "Scattered/A-n69-k9-r16.mtspds",
+    "Scattered/A-n80-k10-r8.mtspds",
+    "Scattered/A-n80-k10-r12.mtspds",
+    "Scattered/A-n80-k10-r16.mtspds",
+    "Scattered/E-n22-k4-r8.mtspds",
+    "Scattered/E-n22-k4-r12.mtspds",
+    "Scattered/E-n22-k4-r16.mtspds",
+    "Scattered/E-n23-k3-r8.mtspds",
+    "Scattered/E-n23-k3-r12.mtspds",
+    "Scattered/E-n23-k3-r16.mtspds",
+    "Scattered/E-n30-k3-r8.mtspds",
+    "Scattered/E-n30-k3-r12.mtspds",
+    "Scattered/E-n30-k3-r16.mtspds",
+    "Scattered/E-n33-k4-r8.mtspds",
+    "Scattered/E-n33-k4-r12.mtspds",
+    "Scattered/E-n33-k4-r16.mtspds",
+    "Scattered/E-n51-k5-r8.mtspds",
+    "Scattered/E-n51-k5-r12.mtspds",
+    "Scattered/E-n51-k5-r16.mtspds",
+    "Scattered/E-n76-k7-r8.mtspds",
+    "Scattered/E-n76-k7-r12.mtspds",
+    "Scattered/E-n76-k7-r16.mtspds",
+    "Scattered/E-n101-k14-r8.mtspds",
+    "Scattered/E-n101-k14-r12.mtspds",
+    "Scattered/E-n101-k14-r16.mtspds",
+    "Scattered/M-n151-k12-r8.mtspds",
+    "Scattered/M-n151-k12-r12.mtspds",
+    "Scattered/M-n151-k12-r16.mtspds",
+    "Scattered/M-n200-k16-r8.mtspds",
+    "Scattered/M-n200-k16-r12.mtspds",
+    "Scattered/M-n200-k16-r16.mtspds",
+    "Scattered/P-n16-k8-r8.mtspds",
+    "Scattered/P-n16-k8-r12.mtspds",
+    "Scattered/P-n16-k8-r16.mtspds",
+    "Scattered/P-n19-k2-r8.mtspds",
+    "Scattered/P-n19-k2-r12.mtspds",
+    "Scattered/P-n19-k2-r16.mtspds",
+    "Scattered/P-n40-k5-r8.mtspds",
+    "Scattered/P-n40-k5-r12.mtspds",
+    "Scattered/P-n40-k5-r16.mtspds",
+    "Scattered/P-n50-k7-r8.mtspds",
+    "Scattered/P-n50-k7-r12.mtspds"
 };
 
 void Param::shuffle(std::vector<int>& vec) {

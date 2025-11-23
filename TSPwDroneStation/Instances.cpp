@@ -2,18 +2,14 @@
 #include <regex>
 
 bool INSTANCE::loadFromFile(const std::string& filename) {
-    // --- Tự động lấy n, k, r từ tên file ---
+    // Tự động lấy n, k, r từ tên file 
     std::smatch match;
     std::regex re("-n(\\d+)-k(\\d+)-r(\\d+)");
     if (std::regex_search(filename, match, re)) {
         if (match.size() == 4) {
-            E = std::stod(match[3].str()) * 2; // r là E/2, nên E = r*2
+            E = std::stod(match[3].str()) * 2; 
         }
     }
-    if( num_trucks >=6) {
-        active_stations = 6;
-    }
-	else active_stations = 4;
     ifstream fin(filename);
     if (!fin.is_open()) {
         cerr << "Error: cannot open file " << filename << endl;
@@ -26,7 +22,7 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
 
     nodes.clear();
     station_list.clear();
-
+    
     while (getline(fin, line)) {
         if (line.empty()) continue;
 
@@ -65,7 +61,7 @@ bool INSTANCE::loadFromFile(const std::string& filename) {
     }
 
     fin.close();
-
+    active_stations = station_list.size();
     n = nodes.size();
 	C.erase(remove(C.begin(), C.end(), 0), C.end()); 
     tau.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
