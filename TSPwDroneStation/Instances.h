@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -38,6 +38,9 @@ public:
 
     bool loadFromFile(const std::string& filename = "");
     bool loadFromFile2(const std::string& filename = "");
+    bool loadFromFile3(const std::string& filename = "");
+    bool loadFromFile4(const std::string& filename = "");
+
 
     void processStations();        
     void displayData();
