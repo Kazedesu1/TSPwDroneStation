@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifndef SOLVER_H
 #define SOLVER_H
 
@@ -23,7 +23,7 @@ public:
 	Solution greedyInsertion(Solution sol);
 	bool isStation(int node) const;
 	Solution Ruin(Solution& sol);
-	Solution removeStation(Solution& sol, int stationNode);
+	void removeStation(Solution& sol, int stationNode);
 	void removeUnusedStations(Solution& sol);
 	Solution RandomRemoval(Solution& sol, double rate);
 	void removeCustomerFromTruck(Solution& sol, int truckId, int customer);
@@ -37,9 +37,16 @@ public:
 	vector<int> selectStations(const Solution& sol);
 	Solution RandomRemoveDroneNode(Solution& sol, double rate);
 	int lastIter = 0;
-	void select_insertion_criterion(vector<int>& customerQueue, const vector<double>& w, const Solution& sol);
-	vector<double> w = { 5,1,1,2,2 };
+	void select_insertion_criterion(vector<int>& customerQueue, const vector<int>& w, const Solution& sol);
+	vector<int> w = { 5,1,1,2,2 };
 	Solution s_best;
+	int maxIter ;     
+    double Delta ;     // (1 + Δ) là ngưỡng chấp nhận
+    double epsilon ;  // hệ số giảm Δ sau mỗi vòng
+    int nonimproved_threshold ; // số vòng không cải thiện liên tiếp thì dừng
+    int nonimproved_count ;
+    double min_rate ;
+    double max_rate ;
 };
 
 #endif // SOLVER_H
