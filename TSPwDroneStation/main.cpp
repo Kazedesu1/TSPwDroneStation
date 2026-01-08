@@ -1,4 +1,4 @@
-﻿#include <fstream>
+#include <fstream>
 #include <vector>
 #include <sstream>
 #include <chrono>
@@ -11,22 +11,7 @@
 #include <filesystem>
 #include <thread>
 #include <mutex>
-
-int main() {
-   INSTANCE instance;
-   instance.alpha = 1;
-   instance.UAVs = 2;
-	instance.num_trucks = 3;
-   instance.loadFromFile("Intances/Scattered/A-n34-k5-r8.mtspds");
-   instance.displayData();
-   Solver solver(instance);
-	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-	solver.solve();
-	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-	double time_s = std::chrono::duration<double>(end - start).count();
-	std::cout << "Time: " << std::fixed << std::setprecision(2) << time_s << "s" << std::endl;
-   return 0;
-}
+#include <unordered_map>
 
 // void run_with_seed(int seed) {
 //     Param::seed = seed;      // set seed cho solver  
@@ -35,7 +20,7 @@ int main() {
 //     // seed the thread-local C++ RNG so this thread is deterministic
 //     Param::mt.seed(static_cast<std::uint32_t>(seed));
 
-//     std::vector<std::string> files = Param::clusterd_filenames;
+//     std::vector<std::string> files = Param::scatterd_filenames;
 //     std::vector<double> droneSpeeds = { 0.5, 1.0, 2 };
 
 //     // CSV cho từng thread
@@ -74,6 +59,16 @@ int main() {
 //                     instance.loadFromFile("Intances/" + file);
 
 //                     Solver solver(instance);
+
+//                     solver.maxIter = 1228365;
+//                     solver.Delta = 27.3101/100;
+//                     solver.epsilon = 9848.123/10000;
+//                     solver.nonimproved_threshold = 20442;   
+//                     solver.min_rate = 15.4285/100;
+//                     solver.max_rate = 55.7523/100;
+
+                    
+//                     solver.w = {18 ,5 ,15,1,12 };
 
 //                     auto start = std::chrono::high_resolution_clock::now();
 //                     solver.solve();
@@ -175,12 +170,68 @@ int main() {
 
 
 
+// int main() {
+//    INSTANCE instance;
+//    instance.alpha = 1;
+//    instance.UAVs = 2;
+// 	instance.num_trucks = 7;
+//    instance.loadFromFile("Intances/Scattered/A-n46-k7-r16.mtspds");
+//    instance.displayData();
+//    Solver solver(instance);
+// 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+// 	solver.solve();
+// 	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+// 	double time_s = std::chrono::duration<double>(end - start).count();
+// 	std::cout << "Time: " << std::fixed << std::setprecision(2) << time_s << "s" << std::endl;
+//    return 0;
+// }
 
 
+// std::unordered_map<std::string, std::string> parseArgs(int argc, char* argv[]) {
+//     std::unordered_map<std::string, std::string> args;
+//     for (int i = 1; i + 1 < argc; i += 2) {
+//         args[argv[i]] = argv[i + 1];
+//     }
+//     return args;
+// }
+
+// int main(int argc, char* argv[]) {
+
+//     auto args = parseArgs(argc, argv);
+
+//     std::string instanceDir  = args["-instanceDir"];
+//     std::string instanceName = args["-instanceName"];
+
+//     Param::seed = 12345;
+//     INSTANCE instance;
 
 
+//     instance.loadFromFile3(instanceDir + "/" + instanceName);
+
+//     Solver solver(instance);
+
+//     solver.maxIter = std::stoi(args["-maxIter"]);
+//     solver.Delta = std::stod(args["-Delta"])/100;
+//     solver.epsilon = std::stod(args["-epsilon"])/10000;
+//     solver.nonimproved_threshold =
+//     std::stoi(args["-nonimproved_threshold"]);   
+//     solver.min_rate = std::stod(args["-min_rate"])/100;
+//     solver.max_rate = std::stod(args["-max_rate"])/100;
+
+    
+//     solver.w = {
+//         std::stoi(args["-w1"]),
+//         std::stoi(args["-w2"]),
+//         std::stoi(args["-w3"]),
+//         std::stoi(args["-w4"]),
+//         std::stoi(args["-w5"])
+//     };
 
 
+//     solver.solve();
+
+//     std::cout << solver.bestObjective << std::endl;
+// }
 
 
 // int main() {
@@ -270,5 +321,17 @@ int main() {
 //     std::cout << "📁 CSV saved to: " << fs::absolute(outputPath) << std::endl;
 
 //     return 0;
-
 // }
+
+int main() {
+   INSTANCE instance;
+   instance.loadFromFile4("Instance sets/Murray_10/20140813T111613/nodes.csv");
+   instance.displayData();
+   Solver solver(instance);
+   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+   solver.solve();
+   std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+   double time_s = std::chrono::duration<double>(end - start).count();
+   std::cout << "Time: " << std::fixed << std::setprecision(2) << time_s << "s" << std::endl;
+   return 0;
+}
