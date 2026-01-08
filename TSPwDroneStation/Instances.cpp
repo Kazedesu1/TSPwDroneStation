@@ -1,4 +1,4 @@
-﻿#include "Instances.h"
+#include "Instances.h"
 #include <regex>
 
 bool INSTANCE::loadFromFile(const std::string& filename) {
@@ -176,7 +176,281 @@ bool INSTANCE::loadFromFile2(const std::string& filename) {
     return true;
 }
 
+bool INSTANCE::loadFromFile3(const std::string& filename) {
+    // Tự động lấy n, k, r, numtruck, UAVs, alpha từ tên file 
+    // Format: P-n65-k10-r16-4-2-0.5.txt
+    // hoặc: A-n46-k7-r16-7-2-1.txt
+    
+    std::smatch match;
+    
+    // Pattern: {base}-r{r}-{truck}-{uav}-{alpha}.txt
+    std::regex re1("([A-Z]-n\\d+-k\\d+)-r(\\d+)-(\\d+)-(\\d+)-([0-9.]+)\\.txt");
+    
+    // Pattern fallback: {base}-{truck}-{uav}-{alpha}.txt (without r)
+    std::regex re2("([A-Z]-n\\d+-k\\d+)-(\\d+)-(\\d+)-([0-9.]+)\\.txt");
+    
+    // Pattern: {base}-n{n}-k{k}-r{r} (extract E from r)
+    std::regex re_nkr("-n(\\d+)-k(\\d+)-r(\\d+)");
+    
+    // Try to extract E from n-k-r pattern
+    if (std::regex_search(filename, match, re_nkr)) {
+        if (match.size() == 4) {
+            E = std::stod(match[3].str()) * 2;
+        }
+    }
+    
+    // Try to extract truck, uav, alpha from filename
+    if (std::regex_search(filename, match, re1)) {
+        // Format: {base}-r{r}-{truck}-{uav}-{alpha}.txt
+        num_trucks = std::stoi(match[3].str());
+        UAVs = std::stoi(match[4].str());
+        alpha = std::stod(match[5].str());
+    } else if (std::regex_search(filename, match, re2)) {
+        // Format: {base}-{truck}-{uav}-{alpha}.txt
+        num_trucks = std::stoi(match[2].str());
+        UAVs = std::stoi(match[3].str());
+        alpha = std::stod(match[4].str());
+    }
+    // If no match, use defaults already set in main.cpp
+    
+    ifstream fin(filename);
+    if (!fin.is_open()) {
+        cerr << "Error: cannot open file " << filename << endl;
+        return false;
+    }
 
+    string line;
+    enum Section { NONE, DEPOT, CUSTOMERS, DRONE_STATIONS };
+    Section section = NONE;
+
+    nodes.clear();
+    station_list.clear();
+    C.clear();
+    
+    while (getline(fin, line)) {
+        if (line.empty()) continue;
+
+        if (line.find("*/ The Depot") != string::npos) {
+            section = DEPOT;
+            continue;
+        }
+        if (line.find("*/ The Demand Locations") != string::npos) {
+            section = CUSTOMERS;
+            continue;
+        }
+        if (line.find("*/ The Drone Stations") != string::npos) {
+            section = DRONE_STATIONS;
+            continue;
+        }
+
+        stringstream ss(line);
+        double x, y;
+        char comma;
+        if (ss >> x >> comma >> y) {
+            vector<double> point = { x, y };
+            nodes.push_back(point);
+
+            if (section == DRONE_STATIONS) {
+                Stations st;
+                st.id = nodes.size() - 1;
+                st.x = x;
+                st.y = y;
+                st.num_drones = UAVs;
+                station_list.push_back(st);
+            }
+            if (section == CUSTOMERS) {
+                C.push_back(nodes.size() - 1); 
+            }
+        }
+    }
+
+    fin.close();
+    
+    active_stations = station_list.size();
+    n = nodes.size();
+    C.erase(remove(C.begin(), C.end(), 0), C.end()); 
+    
+    tau.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
+    tauprime.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
+    
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < nodes.size(); j++) {
+            double dist = eucliddistance(nodes, i, j);
+            tau[i][j] = tau[j][i] = dist;
+            double a = (alpha > 0.0) ? alpha : 1.0;
+            tauprime[i][j] = tauprime[j][i] = dist / a;
+        }
+    }
+    
+    processStations();
+    return true;
+}
+
+bool INSTANCE::loadFromFile4(const std::string& filename) {
+    
+    std::ifstream fin(filename);
+    if (!fin.is_open()) {
+        std::cerr << "Error: cannot open file " << filename << std::endl;
+        return false;
+    }
+
+    vector<tuple<int,double,double,int>> rows;
+    string line;
+    while (getline(fin, line)) {
+        if (line.empty()) continue;
+        // detect whether line looks like CSV (has commas and 4 columns)
+        std::stringstream ss(line);
+        string s_id, s_x, s_y, s_type;
+        if (!getline(ss, s_id, ',')) continue;
+        if (!getline(ss, s_x, ',')) continue;
+        if (!getline(ss, s_y, ',')) continue;
+        if (!getline(ss, s_type, ',')) {
+            // last field may not be followed by comma; try to read remainder
+            s_type.clear();
+            std::string rem;
+            if (ss >> rem) s_type = rem;
+        }
+        try {
+            int id = stoi(s_id);
+            double x = stod(s_x);
+            double y = stod(s_y);
+            int type = 0;
+            if (!s_type.empty()) {
+                // handle values like "0.4" (tolerance) -> interpret int by rounding
+                try {
+                    type = stoi(s_type);
+                } catch(...) {
+                    // try parse as double then round to int
+                    try {
+                        double td = stod(s_type);
+                        type = static_cast<int>(round(td));
+                    } catch(...) {
+                        type = 0;
+                    }
+                }
+            }
+            rows.emplace_back(id, x, y, type);
+        } catch (...) {
+            // not a CSV line -> fallback to original parser: stop and use old loader
+            fin.close();
+            // fallback: call previous implementation by parsing file with sections
+            // Re-open and run old logic: reuse existing code path above by reading file again
+            // Reset file and parse with section-based parser already implemented below in file.
+            // To avoid duplicating code here, attempt to parse with the original loader steps:
+            // (seek to beginning and re-run original parsing)
+            std::ifstream fin2(filename);
+            if (!fin2.is_open()) {
+                std::cerr << "Error: cannot reopen file " << filename << std::endl;
+                return false;
+            }
+            // Use the original section-based parser (replicate minimal previous behavior)
+            nodes.clear();
+            station_list.clear();
+            C.clear();
+            enum Section { NONE, DEPOT, CUSTOMERS, DRONE_STATIONS };
+            Section section = NONE;
+            while (getline(fin2, line)) {
+                if (line.empty()) continue;
+                if (line.find("*/ The Depot") != string::npos) { section = DEPOT; continue; }
+                if (line.find("*/ The Demand Locations") != string::npos) { section = CUSTOMERS; continue; }
+                if (line.find("*/ The Drone Stations") != string::npos) { section = DRONE_STATIONS; continue; }
+                stringstream ss2(line);
+                double x2, y2; char comma2;
+                if (ss2 >> x2 >> comma2 >> y2) {
+                    nodes.push_back({ x2, y2 });
+                    if (section == DRONE_STATIONS) {
+                        Stations st; st.id = nodes.size() - 1; st.x = x2; st.y = y2; st.num_drones = UAVs;
+                        station_list.push_back(st);
+                    }
+                    if (section == CUSTOMERS) {
+                        C.push_back(nodes.size() - 1);
+                    }
+                }
+            }
+            fin2.close();
+            active_stations = station_list.size();
+            n = nodes.size();
+            C.erase(remove(C.begin(), C.end(), 0), C.end());
+            tau.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
+            tauprime.assign(nodes.size(), vector<double>(nodes.size(), 0.0));
+            for (int i = 0; i < n; ++i) {
+                for (int j = i + 1; j < n; ++j) {
+                    double dist = eucliddistance(nodes, i, j);
+                    tau[i][j] = tau[j][i] = dist;
+                    tauprime[i][j] = tauprime[j][i] = dist / (alpha > 0.0 ? alpha : 1.0);
+                }
+            }
+            processStations();
+            return true;
+        }
+    }
+    fin.close();
+
+    
+    rows.pop_back();
+        
+    if (rows.empty()) {
+        std::cerr << "Error: no CSV rows parsed from " << filename << std::endl;
+        return false;
+    }
+
+    // Build internal structures from CSV rows
+    nodes.clear();
+    station_list.clear();
+    C.clear();
+    truck_only.clear();
+    drone_only.clear();
+
+    // keep given order so indices match file order (depot should be first row)
+    for (size_t i = 0; i < rows.size(); ++i) {
+        int id; double x, y; int type;
+        std::tie(id, x, y, type) = rows[i];
+        nodes.push_back({ x, y });
+    }
+
+    // classify nodes (skip depot as customer)
+    for (size_t idx = 0; idx < rows.size(); ++idx) {
+        if (idx == 0) continue; // depot
+        int type = get<3>(rows[idx]);
+        if (type == 2) {
+            // drone station
+            Stations st;
+            st.id = static_cast<int>(idx);
+            st.x = nodes[idx][0];
+            st.y = nodes[idx][1];
+            st.num_drones = 1;
+            station_list.push_back(st);
+        } else {
+            // customer (either normal or truck-only)
+            C.push_back(static_cast<int>(idx));
+            if (type == 1) truck_only.push_back(static_cast<int>(idx));
+        }
+    }
+
+    // Set drone parameters: range 6.25 (one-way), so E = 2*6.25
+    alpha = 25.0;      // divisor for tauprime (euclid / 25)
+    E = 6.25 * 2.0;    // used by processStations (E/2 = 6.25)
+    active_stations = station_list.size();
+    n = nodes.size();
+    UAVs =1;
+    num_trucks = 1;
+
+    // Distance matrices: tau = Manhattan, tauprime = Euclidean / 25
+    tau.assign(n, vector<double>(n, 0.0));
+    tauprime.assign(n, vector<double>(n, 0.0));
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            double m = manhatandistance(nodes, i, j);
+            double e = eucliddistance(nodes, i, j);
+            tau[i][j] = tau[j][i] = m/ alpha;
+            tauprime[i][j] = tauprime[j][i] = e / alpha;
+        }
+    }
+
+    // fill stations reachable customers & flight times using processStations
+    processStations();
+    return true;
+}
 
 void INSTANCE::processStations() {
     for (auto& st : station_list) {
@@ -228,6 +502,7 @@ void INSTANCE::displayData() {
         }
         cout << endl;
     }
+    cout << "Customers: " << C.size() << endl;
     for(int c : C) {
         cout << "Customer: " << c << " (" << nodes[c][0] << "," << nodes[c][1] << ")" << endl;
 	}
